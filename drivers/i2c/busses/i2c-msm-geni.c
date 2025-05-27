@@ -327,7 +327,7 @@ static void do_reg68_war_for_rtl_se(struct geni_i2c_dev *gi2c)
 		GENI_SE_DBG(gi2c->ipcl, false, gi2c->dev,
 			"%s: Before WAR REG68:0x%x\n", __func__, status);
 		if (status & 0x20) {
-			//Toggle Bit#4, Bit#5 of REG68 to disable/enable stretch
+			//Toggle Bit#4 and Bit#5 of REG68
 			geni_write_reg(0x00100110, gi2c->base,
 							SE_GENI_CFG_REG68);
 		} else {
@@ -339,11 +339,12 @@ static void do_reg68_war_for_rtl_se(struct geni_i2c_dev *gi2c)
 		GENI_SE_DBG(gi2c->ipcl, false, gi2c->dev,
 				"%s: After WAR REG68:0x%x\n", __func__, status);
 	}
+	//REG68 WAR Ends
 }
 
 /**
  * geni_i2c_stop_with_cancel(): stops GENI SE with cancel command.
- * @gi2c: I2C dev handle
+ * @gi2c:	I2C dev handle
  *
  * This is a generic function to stop serial engine, to be called as required.
  *
@@ -352,10 +353,9 @@ static void do_reg68_war_for_rtl_se(struct geni_i2c_dev *gi2c)
 static int geni_i2c_stop_with_cancel(struct geni_i2c_dev *gi2c)
 {
 	int timeout = 0;
-
-	reinit_completion(&gi2c->m_cancel_cmd);
+	reinit_completion(&gi2c->xfer);
 	geni_cancel_m_cmd(gi2c->base);
-	timeout = wait_for_completion_timeout(&gi2c->m_cancel_cmd, HZ);
+	timeout = wait_for_completion_timeout(&gi2c->xfer, HZ);
 	if (!timeout) {
 		I2C_LOG_DBG(gi2c->ipcl, true, gi2c->dev,
 				"%s:Cancel failed\n", __func__);
@@ -377,6 +377,7 @@ static int geni_i2c_stop_with_cancel(struct geni_i2c_dev *gi2c)
  * @gi2c: Handle of the I2C device
  *
  * Return: TRUE if SDA is stuck LOW due to some issue else false.
+ *
  */
 static bool geni_i2c_is_bus_recovery_required(struct geni_i2c_dev *gi2c)
 {
@@ -389,24 +390,25 @@ static bool geni_i2c_is_bus_recovery_required(struct geni_i2c_dev *gi2c)
 	 */
 	return (((geni_ios & 1) == 0) && (gi2c->err == -EPROTO ||
 					gi2c->err == -EBUSY ||
-					gi2c->err == -ETIMEDOUT));
+					gi2c->err == -ETIMEDOUT ||
+					gi2c->err == -EPERM));
 }
 
 /**
  * geni_i2c_bus_recovery(): Function to recover i2c bus when required
- * @gi2c: I2C device handle
+ * @gi2c:	I2C device handle
  *
- * Use this function only when bus in bad state for some reason and need to
+ * Use this function only when bus is bad for some reason and need to
  * reset the slave to bring slave into proper state. This should put
  * bus into proper state once executed successfully.
  *
- * Return: 0 for Success OR Respective error code/value for failure.
+ * Return: Success OR Respective error code/value.
  */
 static int geni_i2c_bus_recovery(struct geni_i2c_dev *gi2c)
 {
 	int timeout = 0;
 
-	/* Must be enabled by client "only" if required. */
+	//Must be enabled by client "only" if required.
 	if (gi2c->bus_recovery_enable &&
 		geni_i2c_is_bus_recovery_required(gi2c)) {
 		GENI_SE_ERR(gi2c->ipcl, false, gi2c->dev,
@@ -418,7 +420,7 @@ static int geni_i2c_bus_recovery(struct geni_i2c_dev *gi2c)
 	}
 
 	I2C_LOG_DBG(gi2c->ipcl, false, gi2c->dev, "%s: start\n", __func__);
-
+	//BUS_CLEAR
 	reinit_completion(&gi2c->xfer);
 	geni_setup_m_cmd(gi2c->base, I2C_BUS_CLEAR, 0);
 	timeout = wait_for_completion_timeout(&gi2c->xfer, HZ);
@@ -435,6 +437,7 @@ static int geni_i2c_bus_recovery(struct geni_i2c_dev *gi2c)
 	I2C_LOG_DBG(gi2c->ipcl, false, gi2c->dev,
 		"%s: BUS_CLEAR success\n", __func__);
 
+	//BUS_STOP
 	reinit_completion(&gi2c->xfer);
 	geni_setup_m_cmd(gi2c->base, I2C_STOP_ON_BUS, 0);
 	timeout = wait_for_completion_timeout(&gi2c->xfer, HZ);
@@ -448,6 +451,7 @@ static int geni_i2c_bus_recovery(struct geni_i2c_dev *gi2c)
 			return timeout;
 		}
 	}
+
 	I2C_LOG_DBG(gi2c->ipcl, false, gi2c->dev, "%s: success\n", __func__);
 	return 0;
 }
@@ -518,6 +522,7 @@ static int do_pending_cancel(struct geni_i2c_dev *gi2c)
 		if (geni_i2c_stop_with_cancel(gi2c))
 			I2C_LOG_DBG(gi2c->ipcl, false, gi2c->dev,
 				    "%s: geni_i2c_stop_with_cancel failed\n", __func__);
+		do_reg68_war_for_rtl_se(gi2c);
 	}
 	gi2c->prev_cancel_pending = false;
 	I2C_LOG_DBG(gi2c->ipcl, false, gi2c->dev, "%s: Pending Cancel done\n", __func__);
@@ -648,6 +653,9 @@ static void geni_i2c_irq_handle_watermark(struct geni_i2c_dev *gi2c, u32 m_stat)
 	struct i2c_msg *cur = gi2c->cur;
 	int i, j;
 	u32 rx_st = readl_relaxed(gi2c->base + SE_GENI_RX_FIFO_STATUS);
+
+	I2C_LOG_DBG(gi2c->ipcl, false, gi2c->dev,
+		"%s: m_irq_status:0x%x\n", __func__, m_stat);
 
 	if (!cur) {
 		I2C_LOG_DBG(gi2c->ipcl, false, gi2c->dev, "%s: Spurious irq\n", __func__);
@@ -782,7 +790,9 @@ irqret:
 		handle_dma_xfer(dm_tx_st, dm_rx_st, gi2c);
 		/* Ensure all writes are done before returning from ISR. */
 		wmb();
-	} else if (m_stat & M_CMD_DONE_EN)
+	}
+
+	else if (m_stat & M_CMD_DONE_EN)
 		gi2c->cmd_done = true;
 
 	if (gi2c->cmd_done) {
@@ -1669,7 +1679,7 @@ static int geni_i2c_xfer(struct i2c_adapter *adap,
 			/* WAR: Set flag to mark cancel pending if IOS bad */
 			geni_ios = geni_read_reg_nolog(gi2c->base, SE_GENI_IOS);
 			if ((geni_ios & 0x3) != 0x3) { //SCL:b'1, SDA:b'0
-				I2C_LOG_DBG(gi2c->ipcl, false, gi2c->dev,
+				I2C_LOG_DBG(gi2c->ipcl, true, gi2c->dev,
 					"%s: IO lines not in good state\n",
 					__func__);
 				/* doing pending cancel only rtl based SE's */
@@ -1680,11 +1690,11 @@ static int geni_i2c_xfer(struct i2c_adapter *adap,
 			}
 		} else {
 			if (msgs[i].flags & I2C_M_RD)
-				I2C_LOG_DBG(gi2c->ipcl, false, gi2c->dev,
+				I2C_LOG_DBG(gi2c->ipcl, true, gi2c->dev,
 				"%s: Read operation completed for len:%d\n",
 				__func__, msgs[i].len);
 			else
-				I2C_LOG_DBG(gi2c->ipcl, false, gi2c->dev,
+				I2C_LOG_DBG(gi2c->ipcl, true, gi2c->dev,
 				"%s:Write operation completed for len:%d\n",
 				__func__,  msgs[i].len);
 		}
@@ -1694,14 +1704,13 @@ static int geni_i2c_xfer(struct i2c_adapter *adap,
 				/* WAR: Set flag to mark cancel pending if IOS bad */
 				geni_ios = geni_read_reg_nolog(gi2c->base, SE_GENI_IOS);
 				if ((geni_ios & 0x3) != 0x3) { //SCL:b'1, SDA:b'0
-					I2C_LOG_DBG(gi2c->ipcl, false, gi2c->dev,
+					I2C_LOG_DBG(gi2c->ipcl, true, gi2c->dev,
 						"%s: IO lines not in good state\n",
 						__func__);
 					gi2c->prev_cancel_pending = true;
 					goto geni_i2c_txn_ret;
 				}
 
-				/* EBUSY set by ARB_LOST error condition */
 				if (gi2c->err == -EBUSY) {
 					I2C_LOG_DBG(gi2c->ipcl, true, gi2c->dev,
 						"%s:run reg68 war\n", __func__);
@@ -1739,7 +1748,7 @@ static int geni_i2c_xfer(struct i2c_adapter *adap,
 			wait_for_completion_timeout(&gi2c->xfer, HZ);
 			if (!timeout)
 				GENI_SE_ERR(gi2c->ipcl, true, gi2c->dev,
-							"Abort failed\n");
+				"Abort failed\n");
 		}
 
 		ret = gi2c->err;
@@ -1753,8 +1762,18 @@ static int geni_i2c_xfer(struct i2c_adapter *adap,
 		}
 	}
 geni_i2c_txn_ret:
-	if (ret == 0)
+	if (ret == 0) {
 		ret = num;
+
+		/* WAR for IO lines at bad state but no error reported */
+		if (!strcmp(dev_name(gi2c->dev), "990000.i2c")) {
+			geni_ios = geni_read_reg_nolog(gi2c->base, SE_GENI_IOS);
+			if ((geni_ios & 0x3) != 0x3) {
+				gi2c->err = -EPERM;
+				geni_i2c_bus_recovery(gi2c);
+			}
+		}
+	}
 
 	if (!gi2c->is_le_vm) {
 		pm_runtime_mark_last_busy(gi2c->dev);
@@ -2103,9 +2122,9 @@ static int geni_i2c_probe(struct platform_device *pdev)
 		dev_info(&pdev->dev, "Multi-EE usecase\n");
 	}
 
-	/* Strictly it's client/slave device decision for an SE */
+	//Strictly only for debug, it's client/slave device decision for an SE.
 	if (of_property_read_bool(pdev->dev.of_node, "qcom,bus-recovery")) {
-		gi2c->bus_recovery_enable = true;
+		gi2c->bus_recovery_enable  = true;
 		dev_dbg(&pdev->dev, "%s:I2C Bus recovery enabled\n", __func__);
 	}
 

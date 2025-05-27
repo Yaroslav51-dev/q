@@ -54,7 +54,7 @@ enum se_protocol_types {
  * @num_clk_levels:	Number of valid clock levels in clk_perf_tbl.
  * @clk_perf_tbl:	Table of clock frequency input to Serial Engine clock.
  * @proto:		Protocol configured for this serial engine
- * @is_list_add;	To synchronize list add and del.
+ * @is_list_add:	To synchronize list add and del.
  */
 struct se_geni_rsc {
 	void __iomem *base;
@@ -404,6 +404,7 @@ struct se_geni_rsc {
 #define RX_FLUSH_DONE		(BIT(4))
 #define RX_GENI_GP_IRQ		(GENMASK(12, 5))
 #define RX_GENI_CANCEL_IRQ	(BIT(14))
+#define RX_GENI_GP_IRQ_EXT	(GENMASK(13, 12))
 #define RX_GENI_CMD_FAILURE	(BIT(15))
 #define DMA_RX_ERROR_STATUS (RX_SBE | RX_GENI_CANCEL_IRQ | RX_GENI_CMD_FAILURE)
 

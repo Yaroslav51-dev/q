@@ -96,6 +96,10 @@ struct gen7_gmu_device {
 	void __iomem *rdpm_mx_virt;
 	/** @num_oob_perfcntr: Number of active oob_perfcntr requests */
 	u32 num_oob_perfcntr;
+	/** @gdsc_nb: Notifier block for cx gdsc regulator */
+	struct notifier_block gdsc_nb;
+	/** @gdsc_gate: Completion to signal cx gdsc collapse status */
+	struct completion gdsc_gate;
 };
 
 struct gmu_mem_type_desc {
@@ -447,6 +451,20 @@ void gen7_gmu_remove(struct kgsl_device *device);
  * Return: 0 on success or negative error on failure
  */
 int gen7_gmu_enable_clks(struct adreno_device *adreno_dev);
+
+/**
+ * gen7_gmu_enable_gdsc - Enable gmu gdsc
+ * @adreno_dev: Pointer to the adreno device
+ *
+ * Return: 0 on success or negative error on failure
+ */
+int gen7_gmu_enable_gdsc(struct adreno_device *adreno_dev);
+
+/**
+ * gen7_gmu_disable_gdsc - Disable gmu gdsc
+ * @adreno_dev: Pointer to the adreno device
+ */
+void gen7_gmu_disable_gdsc(struct adreno_device *adreno_dev);
 
 /**
  * gen7_gmu_handle_watchdog - Handle watchdog interrupt

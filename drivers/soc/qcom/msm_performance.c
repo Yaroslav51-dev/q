@@ -71,7 +71,6 @@ enum cpu_clusters {
 	MAX = 2,
 	CLUSTER_MAX
 };
-
 static struct kset *msm_perf_kset;
 static struct kobject *param_kobj;
 
@@ -2083,6 +2082,7 @@ static int __init msm_performance_init(void)
 	init_pmu_counter();
 
 	dest = ioremap(GPLAF_SP_ADDR, GPLAF_SP_SIZE);
+
 	return 0;
 }
 MODULE_LICENSE("GPL v2");

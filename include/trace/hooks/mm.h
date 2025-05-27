@@ -378,6 +378,9 @@ DECLARE_HOOK(android_vh_skip_swapcache,
 DECLARE_HOOK(android_vh_do_swap_page_spf,
 	TP_PROTO(bool *allow_swap_spf),
 	TP_ARGS(allow_swap_spf));
+DECLARE_HOOK(android_vh_no_iommu_config,
+	TP_PROTO(struct device *dev),
+	TP_ARGS(dev));
 /* macro versions of hooks are no longer required */
 
 DECLARE_HOOK(android_vh_tune_fault_around_bytes,

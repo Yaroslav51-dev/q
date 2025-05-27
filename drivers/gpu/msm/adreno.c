@@ -1490,6 +1490,8 @@ static void adreno_unbind(struct device *dev)
 	kgsl_bus_close(device);
 	device->pdev = NULL;
 
+	kgsl_bus_close(device);
+
 	if (device->num_l3_pwrlevels != 0)
 		qcom_dcvs_unregister_voter(KGSL_L3_DEVICE, DCVS_L3,
 			DCVS_SLOW_PATH);

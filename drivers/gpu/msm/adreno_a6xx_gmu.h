@@ -101,6 +101,11 @@ struct a6xx_gmu_device {
 	void __iomem *pdc_cfg_base;
 	/** @pdc_seq_base: Base address of PDC seq registers */
 	void __iomem *pdc_seq_base;
+
+	/** @gdsc_nb: Notifier block for cx gdsc regulator */
+	struct notifier_block gdsc_nb;
+	/** @gdsc_gate: Completion to signal cx gdsc collapse status */
+	struct completion gdsc_gate;
 };
 
 /* Helper function to get to a6xx gmu device from adreno device */
@@ -252,6 +257,12 @@ int a6xx_gmu_memory_init(struct adreno_device *adreno_dev);
  * This function enables or disables gpu acd feature using mailbox
  */
 void a6xx_gmu_aop_send_acd_state(struct a6xx_gmu_device *gmu, bool flag);
+
+/**
+ * a6xx_gmu_enable_gdsc - Enable gmu gdsc
+ * @adreno_dev: Pointer to the adreno device
+ */
+void a6xx_gmu_disable_gdsc(struct adreno_device *adreno_dev);
 
 /**
  * a6xx_gmu_disable_gdsc - Disable gmu gdsc
