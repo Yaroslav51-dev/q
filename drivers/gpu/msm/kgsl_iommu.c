@@ -2265,7 +2265,6 @@ static int kgsl_iommu_setup_context(struct kgsl_mmu *mmu,
 	struct device_node *node = of_find_node_by_name(parent, name);
 	struct kgsl_device *device = KGSL_MMU_DEVICE(mmu);
 	struct platform_device *pdev;
-	struct kgsl_device *device = KGSL_MMU_DEVICE(mmu);
 	int ret;
 
 	if (!node)

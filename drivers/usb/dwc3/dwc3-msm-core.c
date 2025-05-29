@@ -5656,7 +5656,7 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 
 	mdwc->use_eusb2_phy = of_property_read_bool(node, "qcom,use-eusb2-phy");
 
-	if (dma_set_mask_and_coherent(dev, DMA_BIT_MASK(64))) {
+	if (dma_set_mask_and_coherent(dev, ~0ULL)) {
 		dev_err(&pdev->dev, "setting DMA mask to 64 failed.\n");
 		if (dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32))) {
 			dev_err(&pdev->dev, "setting DMA mask to 32 failed.\n");
@@ -5738,11 +5738,6 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	mutex_init(&mdwc->suspend_resume_mutex);
 	mutex_init(&mdwc->role_switch_mutex);
 
-	mdwc->ss_redriver_node = of_parse_phandle(node, "ssusb_redriver", 0);
-	if (!of_device_is_available(mdwc->ss_redriver_node)) {
-		of_node_put(mdwc->ss_redriver_node);
-		mdwc->ss_redriver_node = NULL;
-	}
 	mdwc->force_gen1 = of_property_read_bool(node,  "qcom,force-gen1");
 
 	if (of_property_read_bool(node, "usb-role-switch")) {
@@ -6233,7 +6228,6 @@ static int dwc3_otg_start_peripheral(struct dwc3_msm *mdwc, int on)
 	struct dwc3_vendor *vdwc = container_of(dwc, struct dwc3_vendor, dwc);
 	int timeout = 1000;
 	int ret;
-	u32 reg = 0;
 
 	pm_runtime_get_sync(mdwc->dev);
 	dbg_event(0xFF, "StrtGdgt gsync",
