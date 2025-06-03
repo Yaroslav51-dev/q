@@ -592,7 +592,6 @@ struct haptics_chip {
 	struct class			hap_class;
 	struct regulator		*hpwr_vreg;
 	struct hrtimer			hbst_off_timer;
-	struct notifier_block		hboost_nb;
 	int				fifo_empty_irq;
 	u32				hpwr_voltage_mv;
 	u32				effects_count;
@@ -5347,35 +5346,6 @@ static bool is_swr_supported(struct haptics_chip *chip)
 	return true;
 }
 
-static int haptics_boost_notifier(struct notifier_block *nb, unsigned long event, void *val)
-{
-	struct haptics_chip *chip = container_of(nb, struct haptics_chip, hboost_nb);
-	u32 vmax_mv;
-	int rc;
-
-	switch (event) {
-	case VMAX_CLAMP:
-		vmax_mv = *(u32 *)val;
-		if (vmax_mv > MAX_HV_VMAX_MV) {
-			dev_err(chip->dev, "voted Vmax (%u mV) is higher than maximum (%u mV)\n",
-					vmax_mv, MAX_HV_VMAX_MV);
-			return -EINVAL;
-		}
-
-		chip->clamped_vmax_mv = vmax_mv;
-		dev_dbg(chip->dev, "Vmax is clamped at %u mV to support hBoost concurrency\n",
-				vmax_mv);
-		rc = haptics_force_vreg_ready(chip, vmax_mv == MAX_HV_VMAX_MV ? false : true);
-		if (rc < 0)
-			return rc;
-		break;
-	default:
-		break;
-	}
-
-	return 0;
-}
-
 static int haptics_probe(struct platform_device *pdev)
 {
 	struct haptics_chip *chip;
@@ -5487,8 +5457,6 @@ static int haptics_probe(struct platform_device *pdev)
 		goto destroy_ff;
 	}
 
-	chip->hboost_nb.notifier_call = haptics_boost_notifier;
-	register_hboost_event_notifier(&chip->hboost_nb);
 #ifdef CONFIG_DEBUG_FS
 	rc = haptics_create_debugfs(chip);
 	if (rc < 0)
@@ -5507,8 +5475,6 @@ static int haptics_remove(struct platform_device *pdev)
 	if (chip->pbs_node)
 		of_node_put(chip->pbs_node);
 
-	unregister_hboost_event_notifier(&chip->hboost_nb);
-	class_unregister(&chip->hap_class);
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(chip->debugfs_dir);
 #endif
