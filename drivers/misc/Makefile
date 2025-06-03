@@ -4,7 +4,14 @@
 #
 
 ccflags-$(CONFIG_MI_HARDWARE_ID) += -I$(srctree)/drivers/misc/hwid/
-
+obj-y 							+= mi-ioturbo/
+obj-$(CONFIG_GPIO_TESTING_MODE) += gpio-testing-mode.o
+obj-y				+= hwid/
+obj-$(CONFIG_PERF_HELPER)       += perf_helper.o
+obj-$(CONFIG_MI_GAMEKEY)        += mi_gamekey/
+obj-$(CONFIG_LDO_WL2866D)	+= wl2866d.o
+obj-$(CONFIG_XIAOMI_GPU_PLAID)	+= plaid/
+obj-$(CONFIG_MMHARDWARE_DETECTION) += mmhardware_sysfs.o
 obj-$(CONFIG_IBM_ASM)		+= ibmasm/
 obj-$(CONFIG_IBMVMC)		+= ibmvmc.o
 obj-$(CONFIG_AD525X_DPOT)	+= ad525x_dpot.o
