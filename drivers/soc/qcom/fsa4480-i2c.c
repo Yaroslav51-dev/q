@@ -2,6 +2,7 @@
 /* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  */
 
+#define DEBUG
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/regmap.h>
@@ -13,7 +14,7 @@
 #include <linux/qti-regmap-debugfs.h>
 
 #define FSA4480_I2C_NAME	"fsa4480-driver"
-
+#define DEBUG
 #define FSA4480_SWITCH_SETTINGS 0x04
 #define FSA4480_SWITCH_CONTROL  0x05
 #define FSA4480_SWITCH_STATUS1  0x07
@@ -27,7 +28,7 @@
 #define FSA4480_DELAY_L_SENSE   0x0F
 #define FSA4480_DELAY_L_AGND    0x10
 #define FSA4480_RESET           0x1E
-
+#include <linux/mmhardware_sysfs.h>
 struct fsa4480_priv {
 	struct regmap *regmap;
 	struct device *dev;
@@ -288,7 +289,7 @@ int fsa4480_switch_event(struct device_node *node,
 		else
 			switch_control = 0x7;
 		fsa4480_usbc_update_settings(fsa_priv, switch_control, 0x9F);
-		break;
+		return 1;
 	case FSA_USBC_ORIENTATION_CC1:
 		fsa4480_usbc_update_settings(fsa_priv, 0x18, 0xF8);
 		return fsa4480_validate_display_port_settings(fsa_priv);
@@ -367,7 +368,9 @@ static int fsa4480_probe(struct i2c_client *i2c,
 
 	mutex_init(&fsa_priv->notification_lock);
 	i2c_set_clientdata(i2c, fsa_priv);
-
+#if IS_ENABLED(CONFIG_MMHARDWARE_DETECTION)
+	register_kobj_under_mmsysfs(MM_HW_AS, "audioswitch");
+#endif
 	INIT_WORK(&fsa_priv->usbc_analog_work,
 		  fsa4480_usbc_analog_work_fn);
 
