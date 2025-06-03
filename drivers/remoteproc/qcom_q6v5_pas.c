@@ -30,7 +30,8 @@
 #include <linux/soc/qcom/qcom_aoss.h>
 #include <trace/events/rproc_qcom.h>
 #include <soc/qcom/qcom_ramdump.h>
-
+#include <linux/of_reserved_mem.h>
+#include <linux/dma-mapping.h>
 #include "qcom_common.h"
 #include "qcom_pil_info.h"
 #include "qcom_q6v5.h"
@@ -740,9 +741,6 @@ static int adsp_probe(struct platform_device *pdev)
 				      &fw_name);
 	if (ret < 0 && ret != -EINVAL)
 		return ret;
-
-	if (desc->minidump_id)
-		ops = &adsp_minidump_ops;
 
 	rproc = rproc_alloc(&pdev->dev, pdev->name, ops, fw_name, sizeof(*adsp));
 
