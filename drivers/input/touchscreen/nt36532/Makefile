@@ -8,4 +8,5 @@ obj-$(CONFIG_TOUCHSCREEN_NT36532_HOSTDL_SPI) += nt36532_touch.o
 nt36532_touch-y := nt36xxx.o \
 	nt36xxx_fw_update.o \
 	nt36xxx_ext_proc.o \
-	nt36xxx_mp_ctrlram.o
+	nt36xxx_mp_ctrlram.o \
+	mi_disp_notifier.o
