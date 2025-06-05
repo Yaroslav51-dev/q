@@ -81,7 +81,6 @@ static void release_touch_event(void);
 static void release_pen_event(void);
 static void nvt_all_para_recovery(void);
 
-extern void touch_irq_boost(void);
 uint32_t ENG_RST_ADDR  = 0x7FFF80;
 uint32_t SPI_RD_FAST_ADDR = 0;	//read from dtsi
 
@@ -1701,8 +1700,6 @@ static irqreturn_t nvt_ts_work_func(int irq, void *data)
 		pm_wakeup_event(&ts->input_dev->dev, 5000);
 	}
 #endif
-
-	touch_irq_boost();
 
 	mutex_lock(&ts->lock);
 
