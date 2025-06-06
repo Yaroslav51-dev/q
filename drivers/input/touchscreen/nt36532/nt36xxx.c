@@ -28,7 +28,7 @@
 #include "nt36xxx.h"
 
 #if defined(CONFIG_DRM_PANEL)
-#include <drm/drm_panel.h>
+#include <linux/soc/qcom/panel_event_notifier.h>
 #include "drm_notifier_mi.h"
 #elif defined(CONFIG_DRM_MSM)
 #include <linux/msm_drm_notify.h>
