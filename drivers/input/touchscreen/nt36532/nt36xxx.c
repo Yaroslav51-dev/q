@@ -1271,7 +1271,7 @@ static int32_t nvt_parse_dt(struct device *dev)
 		ts->gamemode_config[2][4]);
 	}
 
-	ts->config_array = devm_kzalloc(dev, ts->config_array_size * sizeof(struct nvt_config_info), GFP_KERNEL);
+	ts->config_array = devm_kcalloc(dev, ts->config_array_size, sizeof(struct nvt_config_info), GFP_KERNEL);
 	if (!ts->config_array) {
 		NVT_LOG("Unable to allocate memory\n");
 		return -ENOMEM;
@@ -1637,7 +1637,6 @@ static irqreturn_t nvt_ts_work_func(int irq, void *data)
 		pm_wakeup_event(&ts->input_dev->dev, 5000);
 	}
 #endif
-
 	mutex_lock(&ts->lock);
 
 	if (ts->dev_pm_suspend) {
